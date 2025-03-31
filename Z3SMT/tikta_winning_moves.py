@@ -1,109 +1,106 @@
 from z3 import Solver, Int, Or, And, If, Sum, sat
+def winning_moves(player, board):
+    s = Solver()
+    cells = [[Int(f'cell_{i}_{j}') for j in range(3)] for i in range(3)]
+    player_val = 1 if player == 'x' else -1
+    original_empty = [(i, j) for i in range(3) for j in range(3) if board[i][j] == 0]
 
-def analyze_tictactoe(board):
-    solver = Solver()
-    
-    # Create Z3 variables (0=empty, 1=X, 2=O)
-    z3_board = [[Int(f'cell_{i}_{j}') for j in range(3)] for i in range(3)]
-    
-    x_count = sum(1 for row in board for cell in row if cell == 'X')
-    o_count = sum(1 for row in board for cell in row if cell == 'O')
-    
-    if abs(x_count - o_count) > 1:
-        return "Invalid move count"
-    
-    current_player = 1 if x_count == o_count else 2
-    
-    move_diff = []
+    # Set board constraints
     for i in range(3):
         for j in range(3):
             current = board[i][j]
-            if current == 'X':
-                solver.add(z3_board[i][j] == 1)
-            elif current == 'O':
-                solver.add(z3_board[i][j] == 2)
+            if current == 'x':
+                s.add(cells[i][j] == 1)
+            elif current == 'o':
+                s.add(cells[i][j] == -1)
             else:
-                solver.add(Or(z3_board[i][j] == 0, z3_board[i][j] == current_player))
-                move_diff.append(If(z3_board[i][j] == current_player, 1, 0))
+                s.add(Or(cells[i][j] == 0, cells[i][j] == player_val))
 
-    solver.add(Sum(move_diff) == 1)
+    # Exactly one new move constraint
+    s.add(Sum([If(cells[i][j] == player_val, 1, 0) for (i, j) in original_empty]) == 1)
 
-    win_cond = Or(
+    # Corrected win conditions
+    win_conds = []
+    for i in range(3):
         # Rows
-        *[And(z3_board[i][0] == current_player, 
-             z3_board[i][1] == current_player,
-             z3_board[i][2] == current_player) for i in range(3)],
+        win_conds.append(Sum(cells[i][0], cells[i][1], cells[i][2]) == 3 * player_val)
         # Columns
-        *[And(z3_board[0][j] == current_player,
-             z3_board[1][j] == current_player,
-             z3_board[2][j] == current_player) for j in range(3)],
-        # Diagonals
-        And(z3_board[0][0] == current_player,
-            z3_board[1][1] == current_player,
-            z3_board[2][2] == current_player),
-        And(z3_board[0][2] == current_player,
-            z3_board[1][1] == current_player,
-            z3_board[2][0] == current_player)
-    )
-    solver.add(win_cond)
-    if solver.check() == sat:
-        model = solver.model()
-        return [(i, j) for i in range(3) for j in range(3)
-                if model.eval(z3_board[i][j]).as_long() == current_player
-                and board[i][j] == ' ']
-    return None
+        win_conds.append(Sum(cells[0][i], cells[1][i], cells[2][i]) == 3 * player_val)
+    # Diagonals
+    win_conds.append(Sum(cells[0][0], cells[1][1], cells[2][2]) == 3 * player_val)
+    win_conds.append(Sum(cells[0][2], cells[1][1], cells[2][0]) == 3 * player_val)
 
-def run_tests(test_cases):
-    for idx, test_case in enumerate(test_cases):
-        print(f"Running Test {idx + 1}: {test_case['description']}")
-        result = analyze_tictactoe(test_case["board"])
-        if result:
-            print(f"Winning moves: {result}")
+    s.add(Or(win_conds))
+    
+    # Find all winning moves
+    moves = []
+    while s.check() == sat:
+        model = s.model()
+        # Identify the move
+        move = None
+        for (i, j) in original_empty:
+            if model.evaluate(cells[i][j]).as_long() == player_val:
+                move = (i, j)
+                break
+        if move:
+            moves.append(move)
+            # Prevent same move in subsequent checks
+            s.add(cells[move[0]][move[1]] != player_val)
         else:
-            print("No winning moves available")
-        print("-" * 40)
+            break
+    return moves
 
-test_cases = [
+
+def test_winning_moves():
+    test_cases = [
+        # Horizontal win (single move)
         {
             "board": [
-                ['X', ' ', 'O'],
-                [' ', 'X', ' '],
-                [' ', ' ', ' ']
+                ['x', 'x', 0],
+                ['o', 0, 'o'],
+                [0, 0, 0]
             ],
-            "description": "Test case where X can win with a diagonal move"
+            "player": 'x',
+            "expected": [(0, 2)]
         },
+        # Vertical win (two possible moves)
         {
             "board": [
-                ['X', 'O', 'X'],
-                ['O', 'X', 'O'],
-                [' ', ' ', 'X']
+                ['o', 0, 0],
+                ['o', 'x', 0],
+                [0, 'x', 0]
             ],
-            "description": "Test case where X has already won"
+            "player": 'o',
+            "expected": [(2, 0)]  # Changed from [(0, 0), (2, 0)]
         },
+        # Diagonal win (center move)
         {
             "board": [
-                ['X', 'O', 'X'],
-                ['O', 'X', 'O'],
-                [' ', ' ', 'O']
+                ['x', 'o', 0],
+                [0, 0, 'o'],
+                [0, 0, 'x']
             ],
-            "description": "Test case where O can win with a vertical move"
+            "player": 'x',
+            "expected": [(1, 1)]
         },
+        # No winning moves
         {
             "board": [
-                ['X', 'O', 'X'],
-                ['O', 'X', 'O'],
-                ['O', ' ', 'X']
+                ['x', 'o', 'x'],
+                ['o', 'o', 'x'],
+                ['x', 'x', 'o']
             ],
-            "description": "Test case where no winning moves are possible"
-        },
-        {
-            "board": [
-                [' ', ' ', ' '],
-                [' ', ' ', ' '],
-                [' ', ' ', ' ']
-            ],
-            "description": "Empty board test case"
+            "player": 'o',
+            "expected": []
         }
     ]
 
-run_tests(test_cases)
+    for i, tc in enumerate(test_cases):
+        result = winning_moves(tc["player"], tc["board"])
+        print(f"Test {i+1}: {tc['expected']} vs {result}")
+        assert sorted(result) == sorted(tc["expected"]), \
+            f"Test {i+1} failed: Expected {tc['expected']}, Got {result}"
+    
+    print("All tests passed!")
+
+test_winning_moves()
