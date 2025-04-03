@@ -1,3 +1,4 @@
+import time
 from z3 import Solver, Or, And, Int, sat
 
 def winning_moves(board, player):
@@ -70,57 +71,79 @@ def print_grid(board):
     print("  " + "   ".join(map(str, range(cols))))
 
 def test_winning_moves():
-    # Test 1: Empty board (no winning moves)
-    board1 = [
-        [' ',' ',' ',' ',' ',' ',' '],
-        [' ',' ',' ',' ',' ',' ',' '],
-        [' ',' ',' ',' ',' ',' ',' '],
-        [' ',' ',' ',' ',' ',' ',' '],
-        [' ',' ',' ',' ',' ',' ',' '],
-        [' ',' ',' ',' ',' ',' ',' ']
+    test_cases = [
+        {
+            "name": "Empty board (no winning moves)",
+            "board": [
+                [' ',' ',' ',' ',' ',' ',' '],
+                [' ',' ',' ',' ',' ',' ',' '],
+                [' ',' ',' ',' ',' ',' ',' '],
+                [' ',' ',' ',' ',' ',' ',' '],
+                [' ',' ',' ',' ',' ',' ',' '],
+                [' ',' ',' ',' ',' ',' ',' ']
+            ],
+            "player": 'r',
+            "expected": []
+        },
+        {
+            "name": "Horizontal win (r's turn)",
+            "board": [
+                [' ',' ',' ',' ',' ',' ',' '],
+                [' ',' ',' ',' ',' ',' ',' '],
+                [' ',' ',' ',' ',' ',' ',' '],
+                [' ',' ',' ',' ',' ',' ',' '],
+                ['b',' ',' ',' ',' ',' ',' '],
+                ['r','r','r',' ','b',' ',' ']
+            ],
+            "player": 'r',
+            "expected": [3]
+        },
+        {
+            "name": "Vertical win (b's turn)",
+            "board": [
+                [' ',' ',' ',' ',' ',' ',' '],
+                [' ',' ',' ',' ',' ',' ',' '],
+                [' ',' ',' ',' ',' ',' ',' '],
+                ['b',' ',' ',' ',' ',' ',' '],
+                ['b','r',' ',' ',' ',' ',' '],
+                ['b','r',' ',' ','r',' ',' ']
+            ],
+            "player": 'b',
+            "expected": [0]
+        },
+        {
+            "name": "Diagonal win (r's turn)",
+            "board": [
+                [' ',' ',' ',' ',' ',' ',' '],
+                [' ',' ',' ',' ',' ',' ',' '],
+                [' ',' ',' ',' ',' ',' ',' '],
+                [' ',' ','r','b',' ',' ',' '],
+                [' ','r','b','r',' ',' ',' '],
+                ['r','b','r','b',' ',' ',' ']
+            ],
+            "player": 'r',
+            "expected": [3]
+        }
     ]
-    print_grid(board1)
-    print(f"Test 1: {winning_moves(board1, 'r')}")
-    assert winning_moves(board1, 'r') == []
 
-    # Test 2: Horizontal win (r's turn)
-    board2 = [
-        [' ',' ',' ',' ',' ',' ',' '],
-        [' ',' ',' ',' ',' ',' ',' '],
-        [' ',' ',' ',' ',' ',' ',' '],
-        [' ',' ',' ',' ',' ',' ',' '],
-        ['b',' ',' ',' ',' ',' ',' '],
-        ['r','r','r',' ','b',' ',' '] 
-    ]
-    print_grid(board2)
-    print(f"Test 2: {winning_moves(board2, 'r')}")
-    assert winning_moves(board2, 'r') == [3]
-
-    # Test 3: Vertical win (b's turn)
-    board3 = [
-        [' ',' ',' ',' ',' ',' ',' '],
-        [' ',' ',' ',' ',' ',' ',' '],
-        [' ',' ',' ',' ',' ',' ',' '],
-        ['b',' ',' ',' ',' ',' ',' '],
-        ['b','r',' ',' ',' ',' ',' '],
-        ['b','r',' ',' ','r',' ',' '] 
-    ]
-    print_grid(board3)
-    print(f"Test 3: {winning_moves(board3, 'b')}")
-    assert winning_moves(board3, 'b') == [0]
-
-    # Test 4: Diagonal win (r's turn)
-    board4 = [
-        [' ',' ',' ',' ',' ',' ',' '],
-        [' ',' ',' ',' ',' ',' ',' '],
-        [' ',' ',' ',' ',' ',' ',' '],
-        [' ',' ','r','b',' ',' ',' '],
-        [' ','r','b','r',' ',' ',' '],
-        ['r','b','r','b',' ',' ',' ']  
-    ]
-    print_grid(board4)
-    print(f"Test 4: {winning_moves(board4, 'r')}")
-    assert winning_moves(board4, 'r') == [3]
+    average_time = 0
+    for i, tc in enumerate(test_cases):
+        start_time = time.time()
+        
+        print(f"\nTest {i+1}: {tc['name']}")
+        print_grid(tc["board"])
+        result = winning_moves(tc["board"], tc["player"])
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        average_time += duration
+        print(f"Expected: {tc['expected']}, Got: {result}")
+        print(f"Time taken: {duration:.6f} seconds")
+        
+        assert sorted(result) == sorted(tc["expected"]), \
+            f"Test {i+1} failed: Expected {tc['expected']}, Got {result}"
+    average_time /= len(test_cases)
+    
+    print("\nAll test cases passed!")
 
 test_winning_moves()
-print("All test cases passed!")

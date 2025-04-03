@@ -1,3 +1,4 @@
+import time
 from z3 import Solver, Int, Or, And, If, Sum, sat
 def winning_moves(player, board):
     s = Solver()
@@ -5,7 +6,6 @@ def winning_moves(player, board):
     player_val = 1 if player == 'x' else -1
     original_empty = [(i, j) for i in range(3) for j in range(3) if board[i][j] == 0]
 
-    # Set board constraints
     for i in range(3):
         for j in range(3):
             current = board[i][j]
@@ -16,10 +16,8 @@ def winning_moves(player, board):
             else:
                 s.add(Or(cells[i][j] == 0, cells[i][j] == player_val))
 
-    # Exactly one new move constraint
     s.add(Sum([If(cells[i][j] == player_val, 1, 0) for (i, j) in original_empty]) == 1)
 
-    # Corrected win conditions
     win_conds = []
     for i in range(3):
         # Rows
@@ -32,11 +30,9 @@ def winning_moves(player, board):
 
     s.add(Or(win_conds))
     
-    # Find all winning moves
     moves = []
     while s.check() == sat:
         model = s.model()
-        # Identify the move
         move = None
         for (i, j) in original_empty:
             if model.evaluate(cells[i][j]).as_long() == player_val:
@@ -44,7 +40,6 @@ def winning_moves(player, board):
                 break
         if move:
             moves.append(move)
-            # Prevent same move in subsequent checks
             s.add(cells[move[0]][move[1]] != player_val)
         else:
             break
@@ -71,7 +66,7 @@ def test_winning_moves():
                 [0, 'x', 0]
             ],
             "player": 'o',
-            "expected": [(2, 0)]  # Changed from [(0, 0), (2, 0)]
+            "expected": [(2, 0)]
         },
         # Diagonal win (center move)
         {
@@ -95,12 +90,18 @@ def test_winning_moves():
         }
     ]
 
+    average_time = 0
     for i, tc in enumerate(test_cases):
+        start_time = time.time()
         result = winning_moves(tc["player"], tc["board"])
-        print(f"Test {i+1}: {tc['expected']} vs {result}")
+        end_time = time.time()
+        duration = end_time - start_time
+        average_time += duration
+        print(f"Test {i+1}: {tc['expected']} vs {result} | Time taken: {duration:.6f} seconds")
         assert sorted(result) == sorted(tc["expected"]), \
             f"Test {i+1} failed: Expected {tc['expected']}, Got {result}"
-    
+    average_time /= len(test_cases)
+    print(f"\nAverage time taken: {average_time:.6f} seconds")
     print("All tests passed!")
 
 test_winning_moves()

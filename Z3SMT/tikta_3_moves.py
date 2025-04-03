@@ -1,3 +1,4 @@
+import time
 from z3 import Solver, Int, Or, Sum, sat, If, Array, Store, Select, IntSort
 
 def determine_first_player(board, player):
@@ -150,16 +151,22 @@ def test_win_in_three():
         }
     ]
 
+    average_time = 0
     for i, tc in enumerate(test_cases):
+        start_time = time.time()
         result = can_win_in_three_moves(tc["player"], tc["board"])
-        print(f"Test case {i+1}: Board: {tc['board']} \n {tc['expected']} vs {result}")
+        end_time = time.time()
+        duration = end_time - start_time
+        average_time += duration
+        print(f"Test case {i+1}: \n {tc['expected']} vs {result} | Time taken: {duration:.6f} seconds")
         assert result == tc["expected"], \
             f"""Test case {i+1} failed:
             Board: {tc['board']}
             Player: {tc['player']}
             Expected: {tc['expected']}
             Got: {result}"""
-    
+    average_time /= len(test_cases)
+    print(f"Average time taken for test cases: {average_time:.6f} seconds")
     print("All test cases passed!")
 
 test_win_in_three()
