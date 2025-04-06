@@ -1,0 +1,217 @@
+% ======
+%Current active board state selector
+currentBoardState("State2").
+% ======
+
+% ======
+%Board Structure (pretty straightforward each cell of the grid
+%is defined by a row and column)
+row(1..3).
+col(1..3).
+cell(R,C) :- row(R), col(C).
+% ======
+
+
+% ======
+%Board States
+%Board states need to be defined in this fashion
+%Since Clingo does not support compound functor terms
+%since the values we used are not necessarily considered integeres
+%or characters rather their on facts and such we must define 
+%each entry on our grid/board state as a set of facts
+%state name, player peice, row, col
+
+%original test
+boardState("State1", x, 1, 1).
+boardState("State1", x, 1, 2).
+boardState("State1", o, 2, 2).
+boardState("State1", o, 2, 3).
+
+%z3 and clingo single winning move tests
+boardState("State2", x, 1, 1).
+boardState("State2", x, 1, 2).
+boardState("State2", o, 2, 1).
+boardState("State2", o, 2, 3).
+
+boardState("State3", x, 3, 2).
+boardState("State3", x, 2, 2).
+boardState("State3", o, 1, 1).
+boardState("State3", o, 2, 1).
+
+boardState("State4", x, 1, 1).
+boardState("State4", x, 3, 3).
+boardState("State4", o, 1, 2).
+boardState("State4", o, 2, 3).
+
+boardState("State5", x, 1, 1).
+boardState("State5", 0, 1, 2).
+boardState("State5", x, 1, 3).
+boardState("State5", o, 2, 1).
+boardState("State5", o, 2, 2).
+boardState("State5", x, 2, 3).
+boardState("State5", x, 3, 1).
+boardState("State5", x, 3, 2).
+boardState("State5", o, 3, 3).
+
+%3ply tests
+boardState("3plyState1", x, 1, 1).
+boardState("3plyState1", x, 1, 2).
+boardState("3plyState1", o, 2, 1).
+
+boardState("3plyState2", x, 1, 1).
+boardState("3plyState2", o, 2, 2).
+boardState("3plyState2", x, 3, 3).
+
+boardState("3plyState3", x, 1, 1).
+boardState("3plyState3", o, 1, 2).
+boardState("3plyState3", x, 2, 2).
+boardState("3plyState3", o, 3, 3).
+
+boardState("3plyState4", x, 2, 2).
+boardState("3plyState4", o, 3, 3).
+
+boardState("3plyState5", o, 1, 2).
+boardState("3plyState5", x, 2, 1).
+boardState("3plyState5", x, 2, 2).
+boardState("3plyState5", o, 3, 2).
+
+boardState("3plyState6", x, 1, 1).
+boardState("3plyState6", o, 1, 2).
+boardState("3plyState6", x, 2, 2).
+boardState("3plyState6", o, 3, 2).
+
+boardState("3plyState7", x, 1, 1).
+boardState("3plyState7", o, 1, 2).
+boardState("3plyState7", x, 1, 3).
+boardState("3plyState7", x, 2, 1).
+boardState("3plyState7", o, 2, 2).
+boardState("3plyState7", o, 2, 3).
+boardState("3plyState7", o, 3, 1).
+boardState("3plyState7", x, 3, 2).
+boardState("3plyState7", x, 3, 3).
+
+boardState("3plyState8", x, 1, 1).
+boardState("3plyState8", o, 1, 3).
+
+boardState("3plyState9", x, 1, 1).
+boardState("3plyState9", o, 2, 2).
+boardState("3plyState9", x, 3, 3).
+
+% ======
+
+
+% ======
+%makes all defined board states active
+%with respect to the state predicate to allow
+%quering to entried boardStates
+state(S) :- currentBoardState(S), boardState(S, _, _, _).
+% ======
+
+
+% ======
+%converts the boardstate into discrete x and o positions
+%along with defining what an empty cell looks like
+x(S,R,C) :- boardState(S,x,R,C).
+o(S,R,C) :- boardState(S,o,R,C).
+empty(S,R,C) :- state(S), cell(R,C), not x(S,R,C), not o(S,R,C).
+% ======
+
+
+% ======
+%helper rules for diagonals
+diagonal1(R,C) :- row(R), col(C), R = C.
+diagonal2(R,C) :- row(R), col(C), R + C = 4.
+% ====== 
+
+
+% ======
+% Horizontal Winning Move Detection
+%if for the given state there are two x entries not in the same column
+%but same row put an x in their same row but in neither of their columns
+win_move(S,R,C) :- state(S), row(R), col(C), empty(S,R,C),
+                   col(C1), col(C2), C1 != C2,
+                   x(S,R,C1), x(S,R,C2), C != C1, C != C2.
+
+% Vertical Winning Move Detection
+%if for the given state there are two entries not in the same row
+%but same column put an x in their same column but in neither of their rows
+win_move(S,R,C) :- state(S), col(C), row(R), empty(S,R,C),
+                   row(R1), row(R2), R1 != R2,
+                   x(S,R1,C), x(S,R2,C), R != R1, R != R2.
+
+% Diagonal top left - to - bottom right 
+%if for the given state two of the entries have the same column and row value
+%individiually and the last grid that has the same property is empty
+win_move(S,R,C) :- state(S), row(R), col(C), empty(S,R,C), diagonal1(R,C),
+                   row(R1), col(C1), row(R2), col(C2),
+                   R1 != R2, (R1,C1) != (R2,C2),
+                   x(S,R1,C1), x(S,R2,C2),
+                   diagonal1(R1,C1), diagonal1(R2,C2),
+                   (R,C) != (R1,C1), (R,C) != (R2,C2).
+
+% Diagonal bottom left - to - top right
+%same concept as the previous diagonal but with different row column pattern
+win_move(S,R,C) :- state(S), row(R), col(C), empty(S,R,C), diagonal2(R,C),
+                   row(R1), col(C1), row(R2), col(C2),
+                   R1 != R2, (R1,C1) != (R2,C2),
+                   x(S,R1,C1), x(S,R2,C2),
+                   diagonal2(R1,C1), diagonal2(R2,C2),
+                   (R,C) != (R1,C1), (R,C) != (R2,C2).
+% ======
+
+% ======
+% winning move detection statement for output
+1 { winningMove(S,R,C) : win_move(S,R,C) } 1 :- state(S).
+% ======
+
+
+%The code below simulates move1 (X), move2 (O), move3 (X)
+%for the three turn win detection
+1 { move1(S,R1,C1) : empty(S,R1,C1) } 1 :- state(S).
+
+x1(S,R,C) :- x(S,R,C).
+x1(S,R1,C1) :- move1(S,R1,C1).
+o1(S,R,C) :- o(S,R,C).
+empty1(S,R,C) :-state(S), cell(R,C), not x1(S,R,C), not o1(S,R,C).
+
+{ move2(S,R2,C2) : empty1(S,R2,C2) } :- state(S).
+
+x2(S,R,C) :- x1(S,R,C).
+o2(S,R,C) :- o1(S,R,C).
+o2(S,R2,C2) :- move2(S,R2,C2).
+empty2(S,R,C) :- state(S), cell(R,C), not x2(S,R,C), not o2(S,R,C).
+
+{ move3(S,R3,C3) : empty2(S,R3,C3) } :- state(S).
+
+x3(S,R,C) :- x2(S,R,C).
+x3(S,R3,C3) :- move3(S,R3,C3).
+o3(S,R,C) :- o2(S,R,C).
+
+% Winning state detection for the three step operation
+% Horizontal
+winThreeStep(S) :- row(R), x3(S,R,C1), x3(S,R,C2), x3(S,R,C3),
+           col(C1;C2;C3), C1 != C2, C1 != C3, C2 != C3.
+
+% Vertical
+winThreeStep(S) :- col(C), x3(S,R1,C), x3(S,R2,C), x3(S,R3,C),
+           row(R1;R2;R3), R1 != R2, R1 != R3, R2 != R3.
+
+% Diagonal \
+winThreeStep(S) :- diagonal1(R1,C1), diagonal1(R2,C2), diagonal1(R3,C3),
+           x3(S,R1,C1), x3(S,R2,C2), x3(S,R3,C3),
+           R1 != R2, R1 != R3, R2 != R3.
+
+% Diagonal /
+winThreeStep(S) :- diagonal2(R1,C1), diagonal2(R2,C2), diagonal2(R3,C3),
+           x3(S,R1,C1), x3(S,R2,C2), x3(S,R3,C3),
+           R1 != R2, R1 != R3, R2 != R3.
+
+% Declare a successful 3-ply win
+canWinIn3(S) :- winThreeStep(S).
+
+% ======
+% Output declaration, comment out the #show statement that is 
+% not related to the solving application you do not wish to see 
+% the process of showing the first will prevent the other on the clingo website
+#show winningMove/3.
+#show canWinIn3/1.
