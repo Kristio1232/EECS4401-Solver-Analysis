@@ -1,0 +1,221 @@
+% ======
+%connect 4 board dimensions, similart to tictactoe
+row(1..6).
+col(1..7).
+cell(R,C) :- row(R), col(C).
+%select the board state you wish to use
+%by changing the name currentBoardState("name_of_state")
+currentBoardState("DiagonalWin").
+% ======
+
+
+% ======
+%board states for the game
+%boardState("name", player, chip, row, col)
+boardState("State1", x, 1, 1).
+boardState("State1", x, 2, 1).
+boardState("State1", x, 3, 1).
+boardState("State1", o, 1, 2).
+boardState("State1", o, 2, 2).
+
+boardState("Vertical3_B", o, 1, 1).
+boardState("Vertical3_B", o, 2, 1).
+boardState("Vertical3_B", o, 3, 1).
+boardState("Vertical3_B", o, 6, 2).
+boardState("Vertical3_B", x, 5, 2).
+boardState("Vertical3_B", x, 4, 2).
+boardState("Vertical3_B", x, 6, 1).
+boardState("Vertical3_B", x, 5, 3).
+boardState("Vertical3_B", o, 4, 3).
+
+boardState("BlockedDiagonal", x, 6, 1).
+boardState("BlockedDiagonal", x, 6, 2).
+boardState("BlockedDiagonal", o, 6, 3).
+boardState("BlockedDiagonal", x, 5, 2).
+boardState("BlockedDiagonal", o, 5, 3).
+boardState("BlockedDiagonal", x, 4, 2).
+boardState("BlockedDiagonal", o, 4, 3).
+boardState("BlockedDiagonal", x, 3, 3).
+boardState("BlockedDiagonal", o, 3, 4).
+
+boardState("AlternatingPieces", x, 6, 1).
+boardState("AlternatingPieces", o, 5, 2).
+boardState("AlternatingPieces", x, 5, 1).
+boardState("AlternatingPieces", o, 4, 2).
+boardState("AlternatingPieces", x, 4, 3).
+
+boardState("HorizontalWin", x, 6, 1).
+boardState("HorizontalWin", x, 6, 2).
+boardState("HorizontalWin", x, 6, 3).
+boardState("HorizontalWin", o, 5, 1).
+boardState("HorizontalWin", o, 6, 5).
+
+boardState("VerticalWin", o, 4, 1).
+boardState("VerticalWin", o, 5, 1).
+boardState("VerticalWin", o, 6, 1).
+boardState("VerticalWin", x, 5, 2).
+boardState("VerticalWin", x, 6, 2).
+boardState("VerticalWin", x, 6, 5).
+
+boardState("DiagonalWin", x, 6, 1).
+boardState("DiagonalWin", x, 5, 2).
+boardState("DiagonalWin", x, 4, 3).
+boardState("DiagonalWin", o, 6, 2).
+boardState("DiagonalWin", o, 5, 3).
+boardState("DiagonalWin", o, 4, 4).
+% ======
+
+
+% ======
+%just like in tictac a valid state is the currentBoardState and any
+%board state constituent with the same name
+state(S) :- currentBoardState(S), boardState(S, _, _, _).
+
+%seperate x and o board states into x and o predicates
+x(S,R,C) :- boardState(S,x,R,C).
+o(S,R,C) :- boardState(S,o,R,C).
+%a position is occupied if either an x or o is present there
+occupied(S,R,C) :- x(S,R,C); o(S,R,C).
+% ======
+
+
+% ======
+%Simulate the falling of chips by defining the lowest empty spot
+%as well as gravity by checking the space below the an unoccupied spot
+
+%where a chip will fall and stay put
+lowestEmpty(S,C,R) :- state(S), col(C), row(R),
+    not occupied(S,R,C),
+    not lowerUnoccupied(S,C,R).
+%gravity
+lowerUnoccupied(S,C,R) :- state(S), col(C), row(R), row(R2), R2 < R, not occupied(S,R2,C).
+% ======
+
+
+%combining gravity/lowest empty and an xplacement to see where it 
+%ends up
+drop(S,R,C) :- lowestEmpty(S,C,R).
+xAfter(S,R,C) :- x(S,R,C).
+xAfter(S,R,C) :- drop(S,R,C).
+
+% ======
+% checking if we are in a winning state by looking
+%at lines that now also include the new chip at (R,C)
+
+% Horizontal line
+checkHorizontal(S,R,C,N) :- N = #count { C2 : col(C2), xAfter(S,R,C2), |C2 - C| < 4 },
+    state(S), col(C), row(R).
+
+% Vertical line
+checkVertical(S,R,C,N) :- N = #count { R2 : row(R2), xAfter(S,R2,C), |R2 - R| < 4 }, 
+    state(S), col(C), row(R).
+
+% Diagonal \
+checkDiagonal1(S,R,C,N) :- N = #count {
+    D : row(R2), col(C2),
+    D = R2 - R,
+    R2 = R + D, C2 = C + D,
+    row(R2), col(C2), xAfter(S,R2,C2),
+    D >= -3, D <= 3
+}, state(S), col(C), row(R).
+
+% Diagonal /
+checkDiagonal2(S,R,C,N) :- N = #count {
+    D : row(R2), col(C2),
+    D = R2 - R,
+    R2 = R + D, C2 = C - D,
+    row(R2), col(C2), xAfter(S,R2,C2),
+    D >= -3, D <= 3
+}, state(S), col(C), row(R).
+
+%the single winning move is the one that has any of the above
+%lines being of length four after the drop has occured
+winningMove(S,C,R) :- drop(S,R,C),
+    checkHorizontal(S,R,C,N), N >= 4.
+winningMove(S,C,R) :- drop(S,R,C),
+    checkVertical(S,R,C,N), N >= 4.
+winningMove(S,C,R) :- drop(S,R,C),
+    checkDiagonal1(S,R,C,N), N >= 4.
+winningMove(S,C,R) :- drop(S,R,C),
+    checkDiagonal2(S,R,C,N), N >= 4.
+
+%three move winnability begins here
+%First move (X)
+
+%choosing a column to play
+1 { firstMove(S,C1,R1) : lowestEmpty(S,C1,R1) } 1 :- state(S).
+%x's original moves are tranversed over to the state after x's first new move 
+%move 1/3
+x1(S,R,C) :- x(S,R,C).
+%this is x's first move, move 1/3
+x1(S,R1,C1) :- firstMove(S,C1,R1).
+%we then update the board state based on what is now occupied
+%all previous occupied spaces must still be occupied
+o1(S,R,C) :- o(S,R,C).
+occupied1(S,R,C) :- x1(S,R,C); o1(S,R,C).
+
+%this is how gravity affects during move 1, in other words what
+%will be used in o's response
+lowestEmpty1(S,C,R) :- state(S), col(C), row(R),
+    not occupied1(S,R,C),
+    not lower1(S,C,R).
+lower1(S,C,R) :- state(S), col(C), row(R), row(R2), R2 < R, not occupied1(S,R2,C).
+
+%Opponents move (O), second move
+%similar to x's first move 1/3, o's move 2/3 choose a row and col
+%keeps old grid positions and includes the new one with the new
+%o chip and updates what is occupied as well as gravity simiulation
+{ oMove(S,C2,R2) : lowestEmpty1(S,C2,R2) } :- state(S).
+x2(S,R,C) :- x1(S,R,C).
+o2(S,R,C) :- o1(S,R,C).
+o2(S,R2,C2) :- oMove(S,C2,R2).
+occupied2(S,R,C) :- x2(S,R,C); o2(S,R,C).
+
+lowestEmpty2(S,C,R) :- state(S), col(C), row(R),
+    not occupied2(S,R,C),
+    not lower2(S,C,R).
+lower2(S,C,R) :- state(S), col(C), row(R), row(R2), R2 < R, not occupied2(S,R2,C).
+
+%Final move for x, move 3/3
+%no need to recalc gravity after the final placement for o to respond
+%since there is no turns left
+{ finalMove(S,C3,R3) : lowestEmpty2(S,C3,R3) } :- state(S).
+x3(S,R,C) :- x2(S,R,C).
+x3(S,R3,C3) :- finalMove(S,C3,R3).
+o3(S,R,C) :- o2(S,R,C).
+
+
+%checking to see if there is a x's line of 4 present after
+%the three moves meaning x won
+checkHorizontal3(S,R,C,N) :- N = #count { C2 : col(C2), x3(S,R,C2), |C2 - C| < 4 },
+state(S), col(C), row(R).
+count_vert3(S,R,C,N) :- N = #count { R2 : row(R2), x3(S,R2,C), |R2 - R| < 4 },
+state(S), col(C), row(R).
+
+multiStepDiag1(S,R,C,N) :- N = #count {
+    D : row(R2), col(C2),
+    D = R2 - R,
+    R2 = R + D, C2 = C + D,
+    row(R2), col(C2), x3(S,R2,C2),
+    D >= -3, D <= 3
+},  state(S), col(C), row(R).
+
+multiStepDiag2(S,R,C,N) :- N = #count {
+    D : row(R2), col(C2),
+    D = R2 - R,
+    R2 = R + D, C2 = C - D,
+    row(R2), col(C2), x3(S,R2,C2),
+    D >= -3, D <= 3
+},  state(S), col(C), row(R).
+
+%you can win in three moves if any of the following is true
+winIn3(S) :- finalMove(S,C,R), checkHorizontal3(S,R,C,N), N >= 4.
+winIn3(S) :- finalMove(S,C,R), count_vert3(S,R,C,N), N >= 4.
+winIn3(S) :- finalMove(S,C,R), multiStepDiag1(S,R,C,N), N >= 4.
+winIn3(S) :- finalMove(S,C,R), multiStepDiag2(S,R,C,N), N >= 4.
+
+ 
+
+% ======
+#show winningMove/3.
+%#show winIn3/1.   
