@@ -59,7 +59,6 @@ def can_win_in_three_moves(selected_player, board):
 
 def test_win_in_three():
     test_cases = [
-        # Immediate win in one move (should return True)
         {
             "board": [
                 ['x', 'x', 0],
@@ -69,7 +68,6 @@ def test_win_in_three():
             "player": 'x',
             "expected": True
         },
-        # Fork opportunity (two winning paths)
         {
             "board": [
                 ['x', 0, 0],
@@ -79,7 +77,6 @@ def test_win_in_three():
             "player": 'x',
             "expected": True
         },
-        # Opponent perfect block (should return False)
         {
             "board": [
                 ['x', 'o', 0],
@@ -89,7 +86,6 @@ def test_win_in_three():
             "player": 'x',
             "expected": True
         },
-        # Center control strategy
         {
             "board": [
                 [0, 0, 0],
@@ -99,7 +95,6 @@ def test_win_in_three():
             "player": 'x',
             "expected": True
         },
-        # Edge attack scenario
         {
             "board": [
                 [0, 'o', 0],
@@ -109,7 +104,6 @@ def test_win_in_three():
             "player": 'x',
             "expected": True
         },
-        # Diagonal trap
         {
             "board": [
                 ['x', 'o', 0],
@@ -119,7 +113,6 @@ def test_win_in_three():
             "player": 'x',
             "expected": True
         },
-        # Full board tie
         {
             "board": [
                 ['x', 'o', 'x'],
@@ -129,7 +122,6 @@ def test_win_in_three():
             "player": 'o',
             "expected": False
         },
-        # Three-move sequence win
         {
             "board": [
                 ['x', 0, 'o'],
@@ -139,7 +131,6 @@ def test_win_in_three():
             "player": 'x',
             "expected": True
         },
-        # Opponent fork prevention
         {
             "board": [
                 ['x', 0, 0],
